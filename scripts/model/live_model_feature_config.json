@@ -1,0 +1,41 @@
+{
+  "target_column": "blue_win",
+  "categorical_features": [
+    "blue_champ_1",
+    "blue_champ_2",
+    "blue_champ_3",
+    "blue_champ_4",
+    "blue_champ_5",
+    "red_champ_1",
+    "red_champ_2",
+    "red_champ_3",
+    "red_champ_4",
+    "red_champ_5"
+  ],
+  "numeric_features": [
+    "blue_avg_rank",
+    "red_avg_rank",
+    "blue_avg_mastery",
+    "red_avg_mastery",
+    "blue_avg_recent_wr",
+    "red_avg_recent_wr"
+  ],
+  "all_features": [
+    "blue_champ_1",
+    "blue_champ_2",
+    "blue_champ_3",
+    "blue_champ_4",
+    "blue_champ_5",
+    "red_champ_1",
+    "red_champ_2",
+    "red_champ_3",
+    "red_champ_4",
+    "red_champ_5",
+    "blue_avg_rank",
+    "red_avg_rank",
+    "blue_avg_mastery",
+    "red_avg_mastery",
+    "blue_avg_recent_wr",
+    "red_avg_recent_wr"
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "target_column": "blue_win",
+  "categorical_features": [
+    "blue_top_champion_name",
+    "blue_jungle_champion_name",
+    "blue_mid_champion_name",
+    "blue_adc_champion_name",
+    "blue_support_champion_name",
+    "red_top_champion_name",
+    "red_jungle_champion_name",
+    "red_mid_champion_name",
+    "red_adc_champion_name",
+    "red_support_champion_name"
+  ],
+  "numeric_features": [
+    "blue_avg_rank",
+    "red_avg_rank",
+    "blue_avg_recent_wr",
+    "red_avg_recent_wr",
+    "blue_avg_mastery",
+    "red_avg_mastery"
+  ],
+  "all_features": [
+    "blue_top_champion_name",
+    "blue_jungle_champion_name",
+    "blue_mid_champion_name",
+    "blue_adc_champion_name",
+    "blue_support_champion_name",
+    "red_top_champion_name",
+    "red_jungle_champion_name",
+    "red_mid_champion_name",
+    "red_adc_champion_name",
+    "red_support_champion_name",
+    "blue_avg_rank",
+    "red_avg_rank",
+    "blue_avg_recent_wr",
+    "red_avg_recent_wr",
+    "blue_avg_mastery",
+    "red_avg_mastery"
+  ]
+}
