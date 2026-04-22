@@ -1,6 +1,5 @@
 import json
 import time
-from pathlib import Path
 
 from path_utils import get_base_path
 from spectator_client import get_player_rank, rank_to_number, get_champion_mastery
@@ -69,7 +68,7 @@ def build_features(game_data: dict) -> dict:
         mastery_value = float(get_champion_mastery(puuid, champion_id))
         blue_masteries.append(mastery_value)
 
-    # Nemáme role -> bereme jen 5 champů za red
+
     for i, p in enumerate(red, start=1):
         champion_id = int(p["championId"])
         puuid = p["puuid"]
@@ -90,7 +89,7 @@ def build_features(game_data: dict) -> dict:
     features["blue_avg_mastery"] = sum(blue_masteries) / len(blue_masteries) if blue_masteries else 0.0
     features["red_avg_mastery"] = sum(red_masteries) / len(red_masteries) if red_masteries else 0.0
 
-    # Zatím fallback, pokud recent WR live netaháš
+
     features["blue_avg_recent_wr"] = 0.5
     features["red_avg_recent_wr"] = 0.5
 

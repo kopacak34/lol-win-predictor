@@ -40,7 +40,7 @@ def get_player_rank(puuid: str):
 
     data = r.json()
 
-    # chceme SOLOQ
+
     for entry in data:
         if entry["queueType"] == "RANKED_SOLO_5x5":
             return entry

@@ -40,19 +40,19 @@ def main() -> None:
     if missing_required:
         raise ValueError(f"V datasetu chybí povinné sloupce: {missing_required}")
 
-    # necháme si jen relevantní sloupce
+
     df = df[REQUIRED_COLUMNS].copy()
 
-    # odstranění duplicit
+
     df = df.drop_duplicates(subset=["match_id"]).reset_index(drop=True)
 
-    # target musí existovat
+
     df = df.dropna(subset=["blue_win"]).copy()
 
-    # přetypování targetu
+
     df["blue_win"] = df["blue_win"].astype(int)
 
-    # očista champion name sloupců
+
     champion_columns = [
         "blue_top_champion_name",
         "blue_jungle_champion_name",
@@ -69,7 +69,7 @@ def main() -> None:
     for col in champion_columns:
         df[col] = df[col].astype(str).str.strip()
 
-    # numeric sloupce
+
     numeric_columns = [
         "blue_avg_rank",
         "red_avg_rank",
@@ -82,11 +82,11 @@ def main() -> None:
     for col in numeric_columns:
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
-    # uložit clean verzi
+
     CLEAN_PATH.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(CLEAN_PATH, index=False, encoding="utf-8")
 
-    # train-ready je zatím stejné, ale odděleně pro další kroky
+
     df.to_csv(TRAIN_READY_PATH, index=False, encoding="utf-8")
 
     print("=== ČIŠTĚNÍ HOTOVO ===")

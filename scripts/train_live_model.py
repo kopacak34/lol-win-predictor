@@ -16,10 +16,8 @@ from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, classifi
 def resolve_base_dir() -> Path:
     script_path = Path(__file__).resolve()
 
-    # 1) vnitřní root: ...\lol-draft-predict\lol-draft-predict
     candidate_inner = script_path.parent.parent
 
-    # 2) vnější root: ...\lol-draft-predict
     candidate_outer = script_path.parent.parent.parent
 
     inner_dataset = candidate_inner / "data" / "processed" / "dataset_live_ready.csv"
