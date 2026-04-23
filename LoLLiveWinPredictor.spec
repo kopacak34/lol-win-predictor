@@ -2,12 +2,13 @@
 from PyInstaller.utils.hooks import collect_submodules
 
 hiddenimports = ['joblib', 'pandas', 'numpy', 'requests', 'dotenv']
+hiddenimports += collect_submodules('app')
 hiddenimports += collect_submodules('sklearn')
 
 
 a = Analysis(
     ['app\\main.py'],
-    pathex=[],
+    pathex=['.'],
     binaries=[],
     datas=[('assets/champion.json', 'assets'), ('model/live_model.pkl', 'model'), ('.env', '.')],
     hiddenimports=hiddenimports,

@@ -1,8 +1,8 @@
 import json
 import time
 
-from app.path_utils import get_base_path
-from app.spectator_client import get_player_rank, rank_to_number, get_champion_mastery
+from path_utils import get_base_path
+from spectator_client import get_player_rank, rank_to_number, get_champion_mastery
 
 LOCAL_CHAMPION_JSON = get_base_path() / "assets" / "champion.json"
 

@@ -1,39 +1,38 @@
 from pathlib import Path
 import json
+import sys
+
 import joblib
 import pandas as pd
 
 from sklearn.compose import ColumnTransformer
+from sklearn.ensemble import ExtraTreesClassifier, RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score
+from sklearn.model_selection import GridSearchCV, StratifiedKFold, train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.impute import SimpleImputer
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, classification_report
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from app.feature_engineering import CATEGORICAL, NUMERIC, engineer_dataframe
 
 
 def resolve_base_dir() -> Path:
     script_path = Path(__file__).resolve()
-
     candidate_inner = script_path.parent.parent
-
     candidate_outer = script_path.parent.parent.parent
 
-    inner_dataset = candidate_inner / "data" / "processed" / "dataset_live_ready.csv"
-    outer_dataset = candidate_outer / "data" / "processed" / "dataset_live_ready.csv"
-
-    print(f"[CHECK INNER] {inner_dataset}")
-    print(f"[CHECK OUTER] {outer_dataset}")
-
-    if inner_dataset.exists():
-        return candidate_inner
-
-    if outer_dataset.exists():
-        return candidate_outer
+    for candidate in (candidate_inner, candidate_outer):
+        dataset = candidate / "data" / "processed" / "dataset_live_ready.csv"
+        if dataset.exists():
+            return candidate
 
     raise FileNotFoundError(
-        "Nepodařilo se najít dataset_live_ready.csv ani ve vnitřním, ani ve vnějším rootu projektu."
+        "Nepodarilo se najit data/processed/dataset_live_ready.csv v rootu projektu."
     )
 
 
@@ -42,35 +41,30 @@ BASE_DIR = resolve_base_dir()
 DATA_PATH = BASE_DIR / "data" / "processed" / "dataset_live_ready.csv"
 MODEL_DIR = BASE_DIR / "model"
 MODEL_PATH = MODEL_DIR / "live_model.pkl"
+LEGACY_MODEL_DIR = BASE_DIR / "scripts" / "model"
+LEGACY_MODEL_PATH = LEGACY_MODEL_DIR / "live_model.pkl"
 METRICS_PATH = MODEL_DIR / "live_model_metrics.json"
 FEATURE_CONFIG_PATH = MODEL_DIR / "live_model_feature_config.json"
 
 TARGET = "blue_win"
+RANDOM_STATE = 42
 
-CATEGORICAL = [
-    "blue_champ_1",
-    "blue_champ_2",
-    "blue_champ_3",
-    "blue_champ_4",
-    "blue_champ_5",
-    "red_champ_1",
-    "red_champ_2",
-    "red_champ_3",
-    "red_champ_4",
-    "red_champ_5",
-]
 
-NUMERIC = [
-    "blue_avg_rank",
-    "red_avg_rank",
-    "blue_avg_mastery",
-    "red_avg_mastery",
-    "blue_avg_recent_wr",
-    "red_avg_recent_wr",
-    "rank_diff",
-    "mastery_diff",
-    "wr_diff",
-]
+def make_preprocessor():
+    cat_pipe = Pipeline([
+        ("imputer", SimpleImputer(strategy="most_frequent")),
+        ("onehot", OneHotEncoder(handle_unknown="ignore")),
+    ])
+
+    num_pipe = Pipeline([
+        ("imputer", SimpleImputer(strategy="median")),
+        ("scaler", StandardScaler()),
+    ])
+
+    return ColumnTransformer([
+        ("cat", cat_pipe, CATEGORICAL),
+        ("num", num_pipe, NUMERIC),
+    ])
 
 
 def evaluate(model, X_test, y_test) -> dict:
@@ -83,6 +77,45 @@ def evaluate(model, X_test, y_test) -> dict:
     }
 
 
+def candidate_models():
+    return {
+        "logreg": (
+            Pipeline([
+                ("preprocessor", make_preprocessor()),
+                ("classifier", LogisticRegression(max_iter=3000, random_state=RANDOM_STATE)),
+            ]),
+            {
+                "classifier__C": [0.1, 0.3, 1.0, 3.0],
+                "classifier__class_weight": [None, "balanced"],
+            },
+        ),
+        "random_forest": (
+            Pipeline([
+                ("preprocessor", make_preprocessor()),
+                ("classifier", RandomForestClassifier(random_state=RANDOM_STATE, n_jobs=1)),
+            ]),
+            {
+                "classifier__n_estimators": [300, 700],
+                "classifier__max_depth": [None, 8, 14],
+                "classifier__min_samples_leaf": [1, 3, 6],
+                "classifier__class_weight": [None, "balanced_subsample"],
+            },
+        ),
+        "extra_trees": (
+            Pipeline([
+                ("preprocessor", make_preprocessor()),
+                ("classifier", ExtraTreesClassifier(random_state=RANDOM_STATE, n_jobs=1)),
+            ]),
+            {
+                "classifier__n_estimators": [500, 900],
+                "classifier__max_depth": [None, 8, 14],
+                "classifier__min_samples_leaf": [1, 3, 6],
+                "classifier__class_weight": [None, "balanced"],
+            },
+        ),
+    }
+
+
 def main():
     print(f"[BASE_DIR] {BASE_DIR}")
     print(f"[DATA_PATH] {DATA_PATH}")
@@ -91,21 +124,12 @@ def main():
         raise FileNotFoundError(f"Soubor neexistuje: {DATA_PATH}")
 
     df = pd.read_csv(DATA_PATH)
-
-    import numpy as np
-
-    df["blue_avg_mastery"] = np.log1p(df["blue_avg_mastery"])
-    df["red_avg_mastery"] = np.log1p(df["red_avg_mastery"])
-
-    df["rank_diff"] = df["blue_avg_rank"] - df["red_avg_rank"]
-    df["mastery_diff"] = df["blue_avg_mastery"] - df["red_avg_mastery"]
-    df["wr_diff"] = df["blue_avg_recent_wr"] - df["red_avg_recent_wr"]
-
+    df = engineer_dataframe(df)
 
     required = CATEGORICAL + NUMERIC + [TARGET]
     missing = [col for col in required if col not in df.columns]
     if missing:
-        raise ValueError(f"V datasetu chybí sloupce: {missing}")
+        raise ValueError(f"V datasetu chybi sloupce: {missing}")
 
     X = df[CATEGORICAL + NUMERIC].copy()
     y = df[TARGET].astype(int)
@@ -114,69 +138,55 @@ def main():
         X,
         y,
         test_size=0.3,
-        random_state=42,
-        stratify=y
+        random_state=RANDOM_STATE,
+        stratify=y,
     )
 
-    cat_pipe = Pipeline([
-        ("imputer", SimpleImputer(strategy="most_frequent")),
-        ("onehot", OneHotEncoder(handle_unknown="ignore"))
-    ])
-
-    num_pipe = Pipeline([
-        ("imputer", SimpleImputer(strategy="median")),
-        ("scaler", StandardScaler())
-    ])
-
-    preprocessor = ColumnTransformer([
-        ("cat", cat_pipe, CATEGORICAL),
-        ("num", num_pipe, NUMERIC),
-    ])
-
-    models = {
-        "logreg": Pipeline([
-            ("preprocessor", preprocessor),
-            ("classifier", LogisticRegression(max_iter=1000))
-        ]),
-        "random_forest": Pipeline([
-            ("preprocessor", preprocessor),
-            ("classifier", RandomForestClassifier(
-                n_estimators=300,
-                random_state=42,
-                n_jobs=-1
-            ))
-        ]),
-    }
-
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE)
+    results = {}
     best_name = None
     best_model = None
-    best_f1 = -1.0
-    results = {}
+    best_accuracy = -1.0
 
-    for name, model in models.items():
-        print(f"Trénuji: {name}")
-        model.fit(X_train, y_train)
-        metrics = evaluate(model, X_test, y_test)
+    for name, (pipeline, param_grid) in candidate_models().items():
+        print(f"Trenuji a ladim: {name}")
+        search = GridSearchCV(
+            estimator=pipeline,
+            param_grid=param_grid,
+            scoring="accuracy",
+            cv=cv,
+            n_jobs=1,
+            refit=True,
+        )
+        search.fit(X_train, y_train)
+        metrics = evaluate(search.best_estimator_, X_test, y_test)
+        metrics["best_cv_accuracy"] = float(search.best_score_)
+        metrics["best_params"] = search.best_params_
         results[name] = metrics
 
         print(
-            f"{name}: accuracy={metrics['accuracy']:.4f}, "
-            f"f1={metrics['f1']:.4f}"
+            f"{name}: test_accuracy={metrics['accuracy']:.4f}, "
+            f"test_f1={metrics['f1']:.4f}, "
+            f"cv_accuracy={metrics['best_cv_accuracy']:.4f}"
         )
 
-        if metrics["f1"] > best_f1:
-            best_f1 = metrics["f1"]
+        if metrics["accuracy"] > best_accuracy:
+            best_accuracy = metrics["accuracy"]
             best_name = name
-            best_model = model
+            best_model = search.best_estimator_
 
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
+    LEGACY_MODEL_DIR.mkdir(parents=True, exist_ok=True)
     joblib.dump(best_model, MODEL_PATH)
+    joblib.dump(best_model, LEGACY_MODEL_PATH)
 
     metrics_output = {
         "best_model": best_name,
+        "selection_metric": "accuracy",
         "dataset_size": int(len(df)),
         "train_size": int(len(X_train)),
         "test_size": int(len(X_test)),
+        "class_counts": {str(k): int(v) for k, v in y.value_counts().to_dict().items()},
         "results": results,
     }
 
@@ -194,10 +204,11 @@ def main():
         json.dump(feature_config, f, ensure_ascii=False, indent=2)
 
     print("\n=== HOTOVO ===")
-    print(f"Nejlepší model: {best_name}")
-    print(f"Model uložen do: {MODEL_PATH}")
-    print(f"Metriky uloženy do: {METRICS_PATH}")
-    print(f"Feature config uložen do: {FEATURE_CONFIG_PATH}")
+    print(f"Nejlepsi model: {best_name}")
+    print(f"Model ulozen do: {MODEL_PATH}")
+    print(f"Legacy kopie modelu ulozena do: {LEGACY_MODEL_PATH}")
+    print(f"Metriky ulozeny do: {METRICS_PATH}")
+    print(f"Feature config ulozen do: {FEATURE_CONFIG_PATH}")
 
 
 if __name__ == "__main__":
