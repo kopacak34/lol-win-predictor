@@ -44,7 +44,7 @@ SAVE_EVERY_MATCHES = 10         # po kolika zpracovaných matchích uložit part
 # ==========================================
 # CESTY
 # ==========================================
-DATA_DIR = Path("../data")
+DATA_DIR = Path("../scripts/data")
 RAW_DIR = DATA_DIR / "raw"
 PROCESSED_DIR = DATA_DIR / "processed"
 CHECKPOINT_DIR = DATA_DIR / "checkpoints"

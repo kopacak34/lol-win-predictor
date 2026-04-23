@@ -67,6 +67,9 @@ NUMERIC = [
     "red_avg_mastery",
     "blue_avg_recent_wr",
     "red_avg_recent_wr",
+    "rank_diff",
+    "mastery_diff",
+    "wr_diff",
 ]
 
 
@@ -89,6 +92,16 @@ def main():
 
     df = pd.read_csv(DATA_PATH)
 
+    import numpy as np
+
+    df["blue_avg_mastery"] = np.log1p(df["blue_avg_mastery"])
+    df["red_avg_mastery"] = np.log1p(df["red_avg_mastery"])
+
+    df["rank_diff"] = df["blue_avg_rank"] - df["red_avg_rank"]
+    df["mastery_diff"] = df["blue_avg_mastery"] - df["red_avg_mastery"]
+    df["wr_diff"] = df["blue_avg_recent_wr"] - df["red_avg_recent_wr"]
+
+
     required = CATEGORICAL + NUMERIC + [TARGET]
     missing = [col for col in required if col not in df.columns]
     if missing:
@@ -100,7 +113,7 @@ def main():
     X_train, X_test, y_train, y_test = train_test_split(
         X,
         y,
-        test_size=0.2,
+        test_size=0.3,
         random_state=42,
         stratify=y
     )

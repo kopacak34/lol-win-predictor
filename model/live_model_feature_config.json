@@ -18,7 +18,10 @@
     "blue_avg_mastery",
     "red_avg_mastery",
     "blue_avg_recent_wr",
-    "red_avg_recent_wr"
+    "red_avg_recent_wr",
+    "rank_diff",
+    "mastery_diff",
+    "wr_diff"
   ],
   "all_features": [
     "blue_champ_1",
@@ -36,6 +39,9 @@
     "blue_avg_mastery",
     "red_avg_mastery",
     "blue_avg_recent_wr",
-    "red_avg_recent_wr"
+    "red_avg_recent_wr",
+    "rank_diff",
+    "mastery_diff",
+    "wr_diff"
   ]
 }
