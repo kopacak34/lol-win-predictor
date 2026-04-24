@@ -1,0 +1,389 @@
+Lol Predictor
+
+Aplikace
+
+main 37 - uzivatel Zada riot id entry hrace
+main 79 - ulozneni entry jako riot id
+main 87 - rozdeleni na name a tag
+main 94 - ziska hru posle riot id - sc 108
+sc 109 - ziska uzivatele podle riot id - sc 16
+sc 16 - pripoji se na api hrace, posle request, vrati n+t a puuid
+sc 118 - vraci game(halvni participants)
+main 101 - buildi feature podle game - fb 41
+fb 42 - ulozi hrace + championed(napr 86)
+fb 44/45 - rozdeli do dvou tymu podle team id(100/200)
+fb 57 - ulozi int champ id + puuid hrace z participants
+fb 61 - ulozi champ name podle champ id - fb 32
+fb 32 - prevede int champ id na string name champa - fb 12
+fb 12 - projede cely assets a vrati dvojice int id a string name 
+fb 64 - ulozi cislo ranku podle puuied hrace do promenne- sc 34/51
+sc 34 - nacte api a vraci solo queue hrace s informacemi
+sc 51 - prevede rank na cislo a vraci int
+fb 68 - ulozi hracovo mastery na champovi do promenne - sc 76
+sc 76 - nacte api a vraci mastery
+fb 86-90 - vypocita prumer ranku a mastery obou tymu
+fb 96 - finalni return features dict s blue/red avg rank + avg mastery+ avg recent winrate + vsech 10 champ name
+main 109 - vypocita % na winrate podle features - pre 20
+pre 21 - dopocita dalsi features(diffs) a predela je na tabulku protoze to ocekava model - fe 65
+fe 66 - udela kopii features
+fe 69 - srovna champy abecedne a ulozije do dict (champ 1 sorted)
+fe 73-74 - upravi mastery pres logaritmus
+fe 76-81 - ulozi vsechny nove hodnoty a vrati engineered features
+pre 22 - model spocita pravdepodobnost vyhry(napr[0.62,0.38])
+pre 23 - spoji class(team) a pravdepodobnost vyhry
+pre 25 vraci pravdepodobnost obou tymu
+main 111/112 - vynasoby pravdepodobnost na finalni procenta
+main 115/116 - vypise procenta do aplikace
+
+Dataset
+
+vd - pred cistenim overim dataset, vraci report s informacemi o datasetu jako počet radku, sloupcu...
+cd - vycisti a upravi cely dataset aby všechny cislene hodnoty byli int a vybere potrebne slouoce pro trenovani
+pld - prevede role pouze na champ cisla
+
+tlm 119 - začátek trenovani
+tlm 127 -  udela engineering stejne jako v aplikaci a vrati engineered features
+tml 137-143 - rozdeli data na train a test
+tml 145-149 - zkusi variaty modelu a vybere tu nejlepší podel accuracy
+tml 151 - trenovani všech kandidatu na najelepsi model
+tml 80 - vrati seznam 3 modelu a vrati je v pipeline spojene s prepocessingem - tml 53
+tlm 53 - vytvori pipeline, prevede jmena champu na numercka cisla jako isChamp(one hot), numericke hodnoty skaluje aby byli pro model lepe citelne
+tml 162-165 - vybere nejlepší modely - tml 70
+tml 70 - vyhodnoti model
+tml 173 - vybere nejlepší model podel accuracy
+
+
+
+
+
+
+
+LoL Predictor
+
+Aplikace
+
+main 37 - uživatel zadá Riot ID do entry hráče
+.lib/main.py - LoLWinPredictorApp._build_ui()
+
+main 79 - uloženi entry jako riot_id
+.lib/main.py - LoLWinPredictorApp.run_prediction()
+
+main 87 - rozděleni riot_id na game_name a tag_line
+.lib/main.py - LoLWinPredictorApp.run_prediction()
+
+main 94 - získá hru, posle Riot ID - sc 108
+.lib/main.py - LoLWinPredictorApp.run_prediction()
+app/spectator_client.py - get_active_game_from_riot_id()
+
+sc 109 - získá uživatele podle Riot ID
+app/spectator_client.py - get_active_game_from_riot_id()
+app/spectator_client.py - get_account_by_riot_id()
+
+sc 16 - pripoji se na Riot API account endpoint, posle request, vrati account data hlavne s puuid
+app/spectator_client.py - get_account_by_riot_id()
+
+
+
+{
+    "puuid": "dlouhy_unikatni_identifikator",
+    "gameName": "Nick",
+    "tagLine": "EUNE"
+}
+
+
+
+sc 85 - vraci cely objekt aktivni hry, nejdulezitejsi cast jsou participants
+app/spectator_client.py - get_active_game_from_riot_id()
+app/spectator_client.py - get_active_game_by_puuid()
+
+
+
+{
+    "gameId": 1234567890,
+    "mapId": 11,
+    "gameMode": "CLASSIC",
+    "gameQueueConfigId": 420,
+    "participants": [
+        {
+            "teamId": 100,
+            "championId": 86,
+            "puuid": "abc...",
+            "riotId": "Nick#EUNE"
+        }
+    ]
+}
+
+
+
+main 101 - buildi feature podle game - fb 41
+.lib/main.py - LoLWinPredictorApp.run_prediction()
+app/feature_builder.py - build_features()
+
+fb 42 - ulozi participants z game_data
+app/feature_builder.py - build_features()
+
+fb 44/45 - rozdeli participants do dvou tymu podle teamId 100/200
+app/feature_builder.py - build_features()
+
+fb 58 - ulozi int champion_id + puuid hrace z participants
+app/feature_builder.py - build_features()
+
+fb 61 - ulozi champion name podle champion_id - fb 32
+app/feature_builder.py - build_features()
+app/feature_builder.py - champ_name()
+
+fb 32 - prevede int champion_id na string name champa - fb 12
+app/feature_builder.py - champ_name()
+app/feature_builder.py - load_champion_map()
+
+fb 12 - nacte assets/champion.json a vrati mapu int id -> string name champa
+app/feature_builder.py - load_champion_map()
+
+
+
+{
+    86: "Garen",
+    103: "Ahri",
+    64: "LeeSin",
+    157: "Yasuo"
+}
+
+
+
+fb 64 - získá rank podle puuid hráče a uloží ho nejdřív do proměnné rank_value - sc 34/51
+app/feature_builder.py - build_features()
+app/spectator_client.py - get_player_rank()
+app/spectator_client.py - rank_to_number()
+
+sc 34 - načte Riot API league endpoint a vrátí solo queue entry hrace
+app/spectator_client.py - get_player_rank()
+
+
+
+{
+    "queueType": "RANKED_SOLO_5x5",
+    "tier": "GOLD",
+    "rank": "II",
+    "leaguePoints": 53,
+    "wins": 30,
+    "losses": 25
+}
+
+
+
+sc 51 - převede rank na číslo a vrací int
+app/spectator_client.py - rank_to_number()
+
+fb 65 - přidá číslo ranku do seznamu blue_ranks nebo red_ranks
+app/feature_builder.py - build_features()
+
+fb 68 - uloží hráčovo mastery na champovi do proměnné - sc 76
+app/feature_builder.py - build_features()
+app/spectator_client.py - get_champion_mastery()
+
+sc 76 - nacte Riot API champion mastery endpoint a vraci mastery body
+app/spectator_client.py - get_champion_mastery()
+
+
+
+125000
+
+
+
+fb 69 - přidá mastery do seznamu blue_masteries nebo red_masteries
+app/feature_builder.py - build_features()
+
+fb 86-90 - vypočítá průměr ranku a mastery obou tymu
+app/feature_builder.py - build_features()
+
+fb 93/94 - nastavi blue_avg_recent_wr a red_avg_recent_wr natvrdo na 0.5
+app/feature_builder.py - build_features()
+
+fb 96 - finalni return features dict s blue/red avg rank + avg mastery + avg recent winrate + vsech 10 champ name
+app/feature_builder.py - build_features()
+
+
+
+{
+    "blue_champ_1": "Garen",
+    "blue_champ_2": "LeeSin",
+    "blue_champ_3": "Ahri",
+    "blue_champ_4": "Jinx",
+    "blue_champ_5": "Lux",
+    "red_champ_1": "Darius",
+    "red_champ_2": "MasterYi",
+    "red_champ_3": "Zed",
+    "red_champ_4": "Caitlyn",
+    "red_champ_5": "Morgana",
+    "blue_avg_rank": 42.2,
+    "red_avg_rank": 41.0,
+    "blue_avg_mastery": 75000.0,
+    "red_avg_mastery": 82000.0,
+    "blue_avg_recent_wr": 0.5,
+    "red_avg_recent_wr": 0.5
+}
+
+
+
+
+main 109 - posle features do predictor.predict() - pre 20
+.lib/main.py - LoLWinPredictorApp.run_prediction()
+app/predictor.py - Predictor.predict()
+
+pre 21 - zavolá engineer_feature_dict(features), udělá z toho jednořádkový DataFrame
+app/predictor.py - Predictor.predict()
+app/feature_engineering.py - engineer_feature_dict()
+
+
+
+blue_champ_1	blue_champ_2	red_champ_1	blue_avg_rank	red_avg_rank	rank_diff
+Garen	LeeSin	Darius	42.2	41.0	1.2
+
+
+
+fe 66 - udělá kopii původních features
+app/feature_engineering.py - engineer_feature_dict()
+
+fe 68-71 - srovná champy abecedně a uloží je do dict jako blue_champ_sorted_1 atd.
+app/feature_engineering.py - engineer_feature_dict()
+app/feature_engineering.py - _sorted_team_champs()
+
+fe 73-74 - upravi mastery pres logaritmus log1p
+app/feature_engineering.py - engineer_feature_dict()
+
+fe 76-81 - ulozi vsechny nove hodnoty rank_diff, mastery_diff, wr_diff a vrati engineered features
+app/feature_engineering.py - engineer_feature_dict()
+
+
+
+{
+    "blue_champ_1": "Garen",
+    "blue_champ_2": "LeeSin",
+    "blue_champ_3": "Ahri",
+    "blue_champ_4": "Jinx",
+    "blue_champ_5": "Lux",
+    "red_champ_1": "Darius",
+    "red_champ_2": "MasterYi",
+    "red_champ_3": "Zed",
+    "red_champ_4": "Caitlyn",
+    "red_champ_5": "Morgana",
+    "blue_champ_sorted_1": "Ahri",
+    "blue_champ_sorted_2": "Garen",
+    "blue_champ_sorted_3": "Jinx",
+    "blue_champ_sorted_4": "LeeSin",
+    "blue_champ_sorted_5": "Lux",
+    "red_champ_sorted_1": "Caitlyn",
+    "red_champ_sorted_2": "Darius",
+    "red_champ_sorted_3": "MasterYi",
+    "red_champ_sorted_4": "Morgana",
+    "red_champ_sorted_5": "Zed",
+    "blue_avg_rank": 42.2,
+    "red_avg_rank": 41.0,
+    "blue_avg_mastery": 11.23,
+    "red_avg_mastery": 11.31,
+    "blue_avg_recent_wr": 0.5,
+    "red_avg_recent_wr": 0.5,
+    "rank_diff": 1.2,
+    "mastery_diff": -0.08,
+    "wr_diff": 0.0
+}
+
+
+
+
+pre 22 - model spočítá pravděpodobnost tříd pomoci predict_proba, např [0.62, 0.38]
+app/predictor.py - Predictor.predict()
+
+pre 23 - spoji class 0/1 a pravdepodobnost do dict
+app/predictor.py - Predictor.predict()
+
+pre 22-25 - vraci pravdepodobnost obou tymu jako blue_win_prob a red_win_prob
+app/predictor.py - Predictor.predict()
+
+
+
+{
+    "blue_win_prob": 0.38,
+    "red_win_prob": 0.62
+}
+
+
+
+
+main 111/112 - vynásobí pravděpodobnost na finální procenta
+.lib/main.py - LoLWinPredictorApp.run_prediction()
+
+main 115/116 - vypíše procenta do aplikace
+.lib/main.py - LoLWinPredictorApp.run_prediction()
+
+
+Dataset
+
+vd - pred čistěním ověřím dataset, vrací report s informacemi o datasetu jako počet řádků, sloupců, duplicity, missing values, target distribution
+scripts/validate_dataset.py - main()
+
+cd - vyčistí a upraví celý dataset, vybere potřebné sloupce pro trénovaní, odstraní duplicity, odstraní prázdné blue_win, texty ořezává, numerické hodnoty převádí přes pd.to_numeric
+scripts/clean_dataset.py - main()
+
+pld - převede dataset do live formátu, tedy role sloupce jako blue_top_champion_name změní na blue_champ_1 atd., nepřevádí je na čísla ale na live sloupce se jmény championu
+scripts/prepare_live_dataset.py - main()
+
+
+Train live model
+
+tlm 119 - začátek trénovaní, načte dataset_live_ready.csv
+scripts/train_live_model.py - main()
+
+tlm 127 - udělá engineering stejné jako v aplikaci, ale nad celým DataFrame
+scripts/train_live_model.py - main()
+app/feature_engineering.py - engineer_dataframe()
+
+tlm 123-126 - zkontroluje, jestli v datasetu existuji vsechny potrebne sloupce
+scripts/train_live_model.py - main()
+
+tlm 134-135 - oddělí X features a y target blue_win
+scripts/train_live_model.py - main()
+
+tlm 134-143 - rozdělí data na train a test
+scripts/train_live_model.py - main()
+
+tlm 145 - nastavi stratified k-fold cross validation
+scripts/train_live_model.py - main()
+
+tlm 144-154 - pro každého kandidáta vytvoří GridSearchCV a ladí parametry podle accuracy
+scripts/train_live_model.py - main()
+
+tlm 80 - vrátí 3 kandidáty modelu a jejich param gridy v pipeline spojene s preprocessingem - tlm 53
+scripts/train_live_model.py - candidate_models()
+scripts/train_live_model.py - make_preprocessor()
+
+tlm 53 - vytvoří preprocessor, textové champy převádí na numerická data přes one hot encoding, numerické hodnoty imputuje a skaluje
+scripts/train_live_model.py - make_preprocessor()
+
+tlm 161 - trénovaní kandidáta na train datech
+scripts/train_live_model.py - main()
+
+tlm 162 - vyhodnotí nejlepší nalezenou variantu daného kandidáta - tlm 70
+scripts/train_live_model.py - main()
+scripts/train_live_model.py - evaluate()
+
+tlm 70 - vrati accuracy, f1, confusion matrix a classification report
+scripts/train_live_model.py - evaluate()
+
+tlm 167-171 - vypíše vysledky kandidata, test accuracy, test f1 a cv accuracy
+scripts/train_live_model.py - main()
+
+tlm 173-176 - vybere nejlepší model podle accuracy
+scripts/train_live_model.py - main()
+
+tlm 178-181 - uloží nejlepší model do model/live_model.pkl a do legacy cesty scripts/model/live_model.pkl
+scripts/train_live_model.py - main()
+
+tlm 183-190 - uloží metrics_output do live_model_metrics.json
+scripts/train_live_model.py - main()
+
+tlm 196-200 - uloží feature_config do live_model_feature_config.json
+scripts/train_live_model.py - main()
+
+tlm 206-211 - vypise hotovy výsledek trenovani
+scripts/train_live_model.py - main()
