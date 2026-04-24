@@ -89,7 +89,6 @@ def build_features(game_data: dict) -> dict:
     features["blue_avg_mastery"] = sum(blue_masteries) / len(blue_masteries) if blue_masteries else 0.0
     features["red_avg_mastery"] = sum(red_masteries) / len(red_masteries) if red_masteries else 0.0
 
-
     features["blue_avg_recent_wr"] = 0.5
     features["red_avg_recent_wr"] = 0.5
 

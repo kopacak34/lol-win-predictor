@@ -15,7 +15,7 @@ HEADERS = {
 
 def get_account_by_riot_id(game_name: str, tag_line: str):
     url = (
-        f"https://{REGIONAL_ROUTIawNG}.api.riotgames.com/"
+        f"https://{REGIONAL_ROUTING}.api.riotgames.com/"
         f"riot/account/v1/accounts/by-riot-id/{game_name}/{tag_line}"
     )
     r = requests.get(url, headers=HEADERS, timeout=20)
